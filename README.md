@@ -1,2 +1,2 @@
 # burger-builder
-A introductory React project from a course 
+An introductory React project from a course 
