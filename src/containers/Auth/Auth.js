@@ -6,6 +6,7 @@ import * as actions from '../../store/actions/index';
 import {connect} from 'react-redux'; 
 import Spinner from '../../components/UI/Spinner/Spinner'; 
 import {Redirect} from 'react-router-dom'; 
+import {updateObject, checkValidity} from '../../shared/utility'; 
 
 class Auth extends Component {
     state = {
@@ -39,56 +40,52 @@ class Auth extends Component {
                 },
                 valid: false,
                 touched: false
+            },
+            confirmPassword: {
+                elementType: 'input',
+                elementConfig: {
+                    type: 'password',
+                    placeholder: 'Confirm'
+                },
+                lowercasePlaceholder: 'password',
+                value: '',
+                validation: {
+                    required: true,
+                    minLength: 6
+                },
+                valid: false,
+                touched: false
             }
         },
-        isSignIn: true
+        isSignIn: true,
+        formIsValid: false 
     }
 
     componentDidMount() {
         if (!this.props.buildingBurger && this.props.authRedirectPath !== '/') {
             this.props.onSetAuthRedirectPath(); 
         }
-    }
-
-    checkValidity(value, rules) {
-        let isValid = true;
-        
-        if (rules.required) {
-            isValid = value.trim() !== '' && isValid; 
-        }
-
-        if (rules.length) {
-            isValid = value.length === rules.length && isValid; 
-        }
-
-        if (rules.isEmail) {
-            const pattern = /\S+@\S+\.\S+/;
-            isValid = pattern.test(value) && isValid;
-        }
-
-        if (rules.minLength) {
-            isValid = value.length >= rules.minLength && isValid
-        }
-
-        return isValid; 
+        this.props.onResetErrors(); 
     }
 
     inputChangedHandler = (event, controlName) => {
-        const updatedControls = {
-            ...this.state.controls,
-            [controlName]: {
-                ...this.state.controls[controlName],
+        const updatedControls = updateObject(this.state.controls, {
+            [controlName]: updateObject(this.state.controls[controlName], {
                 value: event.target.value,
-                valid: this.checkValidity(event.target.value, this.state.controls[controlName].validation),
+                valid: checkValidity(event.target.value, this.state.controls[controlName].validation),
                 touched: true
-            }
+            })
+        })   
+        let formIsValid = true;
+        for (let inputIdentifier in updatedControls) {
+            formIsValid = updatedControls[inputIdentifier].valid && formIsValid; 
         }
-        this.setState({controls: updatedControls})
+        this.setState({controls: updatedControls, formIsValid: formIsValid});
     }
 
     submitHandler = (event) => {
         event.preventDefault();
-        this.props.onAuth(this.state.controls.email.value, this.state.controls.password.value, this.state.isSignIn);
+        this.props.onAuth(this.state.controls.email.value, this.state.controls.password.value, this.state.isSignIn, this.state.controls.confirmPassword.value);
     }
 
     switchAuthModeHandler = () => {
@@ -119,6 +116,10 @@ class Auth extends Component {
                 valueType = {formElement.config.lowercasePlaceholder}/>
         ))
 
+        if (this.state.isSignIn) {
+            form.length = 2;
+        }
+
         if (this.props.loading) {
             form = <Spinner />; 
         }
@@ -139,7 +140,7 @@ class Auth extends Component {
             ); 
             else if (this.props.error.message === 'TOO_MANY_ATTEMPTS_TRY_LATER')
             errorMessage = (
-                <p style = {{color: 'red'}}>Too many attempts have been made. Try later.</p>
+                <p style = {{color: 'red'}}>Too many attempts have been made. Try again later.</p>
             ); 
             else if (this.props.error.message === 'EMAIL_NOT_FOUND')
             errorMessage = (
@@ -160,17 +161,25 @@ class Auth extends Component {
             }
         }
 
+        let passwordError = null;
+        if (this.props.passwordFailedToMatch) 
+        passwordError = (
+            <p style = {{color: 'red'}}>The passwords you have entered do not match.</p>
+        ); 
+
         let redirectAuth = null; 
         if (this.props.isAuthenticated) {
-            redirectAuth =  <Redirect to = {this.props.authRedirectPath} />
+            redirectAuth = <Redirect to = {this.props.authRedirectPath} />
         }
-
+        
+        let formIsValidIsSignIn = this.state.isSignIn && this.state.controls.email.valid && this.state.controls.password.valid;
         return(
             <div className = {classes.Auth}>
+                {passwordError}
                 {errorMessage}
                 <form onSubmit = {this.submitHandler}>
                     {form}
-                    <Button btnType = "Success">{this.state.isSignIn ? 'SIGN IN ' : 'SIGN UP '}</Button>
+                    <Button btnType = "Success" disabled = {!this.state.formIsValid && !formIsValidIsSignIn}>{this.state.isSignIn ? 'SIGN IN ' : 'SIGN UP '}</Button>
                 </form>
                 <Button 
                     clicked = {this.switchAuthModeHandler}
@@ -187,14 +196,16 @@ const mapStateToProps = state => {
         error: state.auth.error,
         isAuthenticated: state.auth.token !== null,
         buildingBurger: state.burgerBuilder.building,
-        authRedirectPath: state.auth.authRedirectPath 
+        authRedirectPath: state.auth.authRedirectPath,
+        passwordFailedToMatch: state.auth.passwordFailedToMatch 
     }
 }
 
 const mapDispatchToProps = dispatch => {
     return {
-        onAuth: (email, password, isSignIn) => dispatch(actions.auth(email, password, isSignIn)),
-        onSetAuthRedirectPath: () => dispatch(actions.setAuthRedirectPath('/'))
+        onAuth: (email, password, isSignIn, confirmedPassword) => dispatch(actions.auth(email, password, isSignIn, confirmedPassword)),
+        onSetAuthRedirectPath: () => dispatch(actions.setAuthRedirectPath('/')),
+        onResetErrors: () => dispatch(actions.resetErrors()) 
     }
 }
 

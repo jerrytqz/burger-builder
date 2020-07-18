@@ -39,8 +39,18 @@ export const checkAuthTimeout = (expirationTime) => {
     }
 }
 
-export const auth = (email, password, isSignIn) => {
+export const passwordFailedToMatch = () => {
+    return {
+        type: actionTypes.PASSWORD_FAILED_TO_MATCH
+    }
+}
+
+export const auth = (email, password, isSignIn, confirmedPassword) => {
     return dispatch => {
+        if (!isSignIn && confirmedPassword !== password) {
+            dispatch(passwordFailedToMatch());
+            return; 
+        }
         dispatch(authStart())
         const authData = {
             email: email,
@@ -89,5 +99,11 @@ export const authCheckState = () => {
                 dispatch(logout()); 
             }
         }
+    }
+}
+
+export const resetErrors = () => {
+    return {
+        type: actionTypes.RESET_ERRORS
     }
 }
