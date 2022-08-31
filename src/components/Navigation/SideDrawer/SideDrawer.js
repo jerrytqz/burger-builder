@@ -3,7 +3,7 @@ import Logo from '../../Logo/Logo';
 import NavigationItems from '../NavigationItems/NavigationItems';
 import classes from './SideDrawer.css'; 
 import Backdrop from '../../UI/Backdrop/Backdrop';
-import Aux from '../../../hoc/Aux/Aux'; 
+import Auxiliary from '../../../hoc/Auxiliary/Auxiliary'; 
 
 const sideDrawer = (props) => {
     let attachedClasses = [classes.SideDrawer, classes.Close];
@@ -13,7 +13,7 @@ const sideDrawer = (props) => {
     }
 
     return(
-        <Aux>
+        <Auxiliary>
             <Backdrop show = {props.open} clicked = {props.closed}/>
             <div className = {attachedClasses.join(' ')} onClick = {props.closed}>
                 <div className = {classes.Logo}> 
@@ -23,7 +23,7 @@ const sideDrawer = (props) => {
                     <NavigationItems isAuthenticated = {props.isAuth}/>
                 </nav>
             </div>
-        </Aux>
+        </Auxiliary>
     ); 
 };
 
